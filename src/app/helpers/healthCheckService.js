@@ -14,6 +14,7 @@ var path = require('path');
 var dateFormat = require('dateformat')
 var contactPoints = envHelper.PORTAL_CASSANDRA_URLS
 var checksArrayObj = []
+var async = require('async')
 var hcMessages = {
   LEARNER_SERVICE: {
     NAME: 'learnerservice.api',
@@ -259,7 +260,7 @@ function checkDependantServiceHealth (dependancyServices) {
       next()
     } else {
       var heathyServiceCount = 0
-      dependancyServices.forEach(service => {
+      async.eachOfSeries(dependancyServices,function(service,count,asyncCallBack){
         if (service === 'LEARNER' && envHelper.sunbird_learner_service_health_status === 'true') {
           heathyServiceCount++
         } else if (service === 'CONTENT' && envHelper.sunbird_content_service_health_status === 'true') {
@@ -267,9 +268,10 @@ function checkDependantServiceHealth (dependancyServices) {
         } else if (service === 'CASSANDRA' && envHelper.sunbird_portal_cassandra_db_health_status === 'true') {
           heathyServiceCount++
         }
-      });
-
-      if (dependancyServices.length !== heathyServiceCount) {
+        asyncCallBack();
+        
+      },function(){
+        if (dependancyServices.length !== heathyServiceCount) {
         res.status(503)
         res.send({
           'id': 'api.error',
@@ -289,6 +291,12 @@ function checkDependantServiceHealth (dependancyServices) {
       } else {
         next()
       }
+      });
+//       dependancyServices.forEach(service => {
+        
+//       });
+
+      
     }
   }
 }
